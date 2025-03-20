@@ -1,31 +1,25 @@
 import requests
 import json
 
-def emotion_predictor(text):
-    """
-    Function to predict the emotion of a given text using Watson NLP API.
-    """
-    api_url = "https://api.us-south.natural-language-understanding.watson.cloud.ibm.com/v1/analyze"
-    api_key = "your_ibm_watson_api_key"
+def emotion_detector(text_to_analyze):
+    url ='https://sn-watson-emotion.labs.skills.network/v1/watson.runtime.nlp.v1/NlpService/EmotionPredict'
+    header = {"grpc-metadata-mm-model-id": "emotion_aggregated-workflow_lang_en_stock"}
+    input_json = { "raw_document": { "text": text_to_analyze } }
+    response = requests.post(url, json=input_json, headers=header)
+    status_code = response.status_code
 
-    headers = {
-        "Content-Type": "application/json"
-    }
+    emotions = {}
 
-    payload = {
-        "text": text,
-        "features": {"emotion": {}}
-    }
-
-    response = requests.post(api_url, headers=headers, json=payload, auth=("apikey", api_key))
-
-    if response.status_code == 200:
-        emotions = response.json()['emotion']['document']['emotion']
-        return emotions
-    else:
-        return {"error": "Could not analyze emotions"}
-
-# Example usage
-if __name__ == "__main__":
-    text_input = "I am extremely happy today!"
-    print(emotion_predictor(text_input))
+    if status_code == 200:
+        formatted_response = json.loads(response.text)
+        emotions = formatted_response['emotionPredictions'][0]['emotion']
+        dominant_emotion = max(emotions.items(), key=lambda x: x[1])
+        emotions['dominant_emotion'] = dominant_emotion[0]
+    elif status_code == 400:
+        emotions['anger'] = None
+        emotions['disgust'] = None
+        emotions['fear'] = None
+        emotions['joy'] = None
+        emotions['sadness'] = None
+        emotions['dominant_emotion'] = None
+    return emotions
